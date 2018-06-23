@@ -60,7 +60,10 @@
 #define S3C2440_NFCMD		S3C2410_NFREG(0x08)
 #define S3C2440_NFADDR		S3C2410_NFREG(0x0C)
 #define S3C2440_NFDATA		S3C2410_NFREG(0x10)
+#define S3C2440_NFMECCD0	S3C2410_NFREG(0x14)
+#define S3C2440_NFMECCD1	S3C2410_NFREG(0x18)
 #define S3C2440_NFSTAT		S3C2410_NFREG(0x20)
+#define S3C2440_NFESTAT0	S3C2410_NFREG(0x24)
 #define S3C2440_NFMECC0		S3C2410_NFREG(0x2C)
 #define S3C2412_NFSTAT		S3C2410_NFREG(0x28)
 #define S3C2412_NFMECC0		S3C2410_NFREG(0x34)
@@ -82,6 +85,8 @@
 #define S3C2412_NFCONT_INIT_MAIN_ECC	(1<<5)
 #define S3C2412_NFCONT_nFCE0		(1<<1)
 #define S3C2412_NFSTAT_READY		(1<<0)
+
+#define S3C2440_NFCONT_MAINECCLOCK       (1<<5)
 
 /* new oob placement block for use with hardware ecc generation
  */
@@ -512,6 +517,48 @@ static int s3c2412_nand_devready(struct mtd_info *mtd)
 
 /* ECC handling functions */
 
+static int s3c2440_nand_correct_data(struct mtd_info *mtd, u_char *dat,
+				     u_char *read_ecc, u_char *calc_ecc)
+{
+	struct s3c2410_nand_info *info = s3c2410_nand_mtd_toinfo(mtd);
+    unsigned long meccdata0, meccdata1, estat0, err_byte_addr;
+	unsigned char  repaired;
+	int ret = -1;
+
+	meccdata0 = (read_ecc[1] << 16) | read_ecc[0];
+	meccdata1 = (read_ecc[3] << 16) | read_ecc[2];
+	writel(meccdata0, info->regs + S3C2440_NFMECCD0);
+	writel(meccdata1, info->regs + S3C2440_NFMECCD0);
+	/*read ecc status*/
+	estat0 = readl(info->regs + S3C2440_NFESTAT0);
+	switch (estat0 & 0x3){
+	    case 0: /*no error*/
+		    ret = 0;
+			break;
+		case 1:
+		    /* 
+			 *1bit error(correctable)
+			 *(nfestat0 >>7) & 0x7ff    error byte number
+			 *(nfestat0 >>4) & 0x7      error bit number
+			 */
+			 err_byte_addr = (estat0 >> 7 ) & 0x7ff;
+			 repaired = dat[err_byte_addr] ^ (1 << ((estat0 >> 4) & 0x7));
+			 printk("S3C2440 NAND: 1 bit error detected at byte%ld. "
+			        "Correcting from 0x%02x to 0x%02x...OK\n",
+					err_byte_addr, dat[err_byte_addr], repaired);
+		     dat[err_byte_addr]= repaired;
+			 ret = 1;
+			 break;
+		case 2: /* Multiple error */
+		case 3: /* ECC area error */
+		    printk("S3C2440 NAND: ECC uncorrectable error detected. Not correctable.\n");
+			ret = -1;
+			break;
+	}
+
+	return ret;
+}
+
 static int s3c2410_nand_correct_data(struct mtd_info *mtd, u_char *dat,
 				     u_char *read_ecc, u_char *calc_ecc)
 {
@@ -617,7 +664,7 @@ static void s3c2440_nand_enable_hwecc(struct mtd_info *mtd, int mode)
 	unsigned long ctrl;
 
 	ctrl = readl(info->regs + S3C2440_NFCONT);
-	writel(ctrl | S3C2440_NFCONT_INITECC, info->regs + S3C2440_NFCONT);
+	writel((ctrl | S3C2440_NFCONT_INITECC) & (~S3C2440_NFCONT_MAINECCLOCK), info->regs + S3C2440_NFCONT);
 }
 
 static int s3c2410_nand_calculate_ecc(struct mtd_info *mtd, const u_char *dat,
@@ -654,13 +701,22 @@ static int s3c2440_nand_calculate_ecc(struct mtd_info *mtd, const u_char *dat,
 {
 	struct s3c2410_nand_info *info = s3c2410_nand_mtd_toinfo(mtd);
 	unsigned long ecc = readl(info->regs + S3C2440_NFMECC0);
-
+#if 0
 	ecc_code[0] = ecc;
 	ecc_code[1] = ecc >> 8;
 	ecc_code[2] = ecc >> 16;
 
 	pr_debug("%s: returning ecc %06lx\n", __func__, ecc & 0xffffff);
+#else
+	writel(readl(info->regs + S3C2440_NFCONT) | S3C2440_NFCONT_MAINECCLOCK, info->regs + S3C2440_NFCONT);
+	ecc_code[0] = ecc & 0xff;
+	ecc_code[1] = (ecc >> 8) & 0xff;
+	ecc_code[2] = (ecc >>16) & 0xff;
+	ecc_code[3] = (ecc >>24) & 0xff;
 
+	pr_debug("s3c2440_nand_calculate_hwecc(%p,): 0x%02x 0x%02x 0x%02x, 0x%02x\n",
+	      mtd , ecc_code[0], ecc_code[1], ecc_code[2], ecc_code[3]);
+#endif 
 	return 0;
 }
 
@@ -966,6 +1022,7 @@ static int s3c2410_nand_update_chip(struct s3c2410_nand_info *info,
 		case TYPE_S3C2440:
 			chip->ecc.hwctl     = s3c2440_nand_enable_hwecc;
 			chip->ecc.calculate = s3c2440_nand_calculate_ecc;
+		    chip->ecc.correct   = s3c2440_nand_correct_data;
 			break;
 		}
 
@@ -974,12 +1031,17 @@ static int s3c2410_nand_update_chip(struct s3c2410_nand_info *info,
 
 		/* change the behaviour depending on whether we are using
 		 * the large or small page nand device */
-		if (chip->page_shift > 10) {
+		if (chip->page_shift < 10) {
 			chip->ecc.size	    = 256;
 			chip->ecc.bytes	    = 3;
 		} else {
-			chip->ecc.size	    = 512;
-			chip->ecc.bytes	    = 3;
+		    if (info->cpu_type == TYPE_S3C2440) {
+				chip->ecc.size	    = 2048;
+				chip->ecc.bytes	    = 4;
+			} else {
+				chip->ecc.size	    = 512;
+				chip->ecc.bytes	    = 3;
+			}
 			mtd_set_ooblayout(nand_to_mtd(chip),
 					  &s3c2410_ooblayout_ops);
 		}

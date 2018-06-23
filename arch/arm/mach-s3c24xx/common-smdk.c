@@ -113,7 +113,7 @@ static struct mtd_partition smdk_default_nand_part[] = {
 	[1] = {
 		.name	= "bootloader",
 		.offset = MTDPART_OFS_APPEND,
-		.size	= SZ_512K + SZ_128K,
+		.size	= SZ_128K * 5,
 	},
 	[2] = {
 		.name	= "params",
@@ -151,7 +151,7 @@ static struct s3c2410_platform_nand smdk_nand_info = {
 	.twrph1		= 20,
 	.nr_sets	= ARRAY_SIZE(smdk_nand_sets),
 	.sets		= smdk_nand_sets,
-	.ecc_mode       = NAND_ECC_SOFT,
+	.ecc_mode   = NAND_ECC_SOFT,
 };
 
 /* devices we initialise */
