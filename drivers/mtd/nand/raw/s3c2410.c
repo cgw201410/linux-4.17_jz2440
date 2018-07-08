@@ -1094,6 +1094,7 @@ static int s3c24xx_nand_probe_dt(struct platform_device *pdev)
 	struct s3c2410_nand_info *info = platform_get_drvdata(pdev);
 	struct device_node *np = pdev->dev.of_node, *child;
 	struct s3c2410_nand_set *sets;
+	char *partname;
 	int val;
 
 	devtype_data = of_device_get_match_data(&pdev->dev);
@@ -1134,6 +1135,10 @@ static int s3c24xx_nand_probe_dt(struct platform_device *pdev)
 		pdata->ecc_mode = NAND_ECC_SOFT;
     }
 
+	if (of_property_read_string_index(np, "part-name", 0, (const char **)&partname)) {
+	    dev_err(&pdev->dev, "DT: can not find part-name\n");
+	}
+
 	pdev->dev.platform_data = pdata;
 
 	pdata->nr_sets = of_get_child_count(np);
@@ -1148,7 +1153,8 @@ static int s3c24xx_nand_probe_dt(struct platform_device *pdev)
 	pdata->sets = sets;
 
 	for_each_available_child_of_node(np, child) {
-		sets->name = (char *)child->name;
+		/*sets->name = (char *)child->name;*/
+		sets->name = partname;
 		sets->of_node = child;
 		sets->nr_chips = 1;
 
