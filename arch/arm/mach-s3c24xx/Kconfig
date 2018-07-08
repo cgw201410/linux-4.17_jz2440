@@ -473,6 +473,20 @@ config MACH_MINI2440
 	  Say Y here to select support for the MINI2440. Is a 10cm x 10cm board
 	  available via various sources. It can come with a 3.5" or 7" touch LCD.
 
+config MACH_JZ2440
+	bool "JZ2440 development board"
+	select S3C2440_XTAL_12000000
+	select S3C24XX_SMDK
+	select S3C_DEV_NAND
+	select S3C_DEV_USB_HOST
+	select TIMER_OF
+	select CLKSRC_OF
+	select PINCTRL
+	select PINCTRL_S3C24XX
+	help
+	  Say Y here to select support for the JZ2440. Is a awesome and magical board
+	  available via various sources. It can come with a 3.5" or 4.3" touch LCD.
+
 config MACH_NEXCODER_2440
 	bool "NexVision NEXCODER 2440 Light Board"
 	select S3C2440_XTAL_12000000
@@ -516,7 +530,7 @@ config MACH_RX3715
 
 config ARCH_S3C2440
 	bool "SMDK2440"
-	select S3C2440_XTAL_16934400
+	select S3C2440_XTAL_12000000
 	select S3C24XX_SMDK
 	select S3C_DEV_NAND
 	select S3C_DEV_USB_HOST

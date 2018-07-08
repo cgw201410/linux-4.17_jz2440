@@ -1,0 +1,99 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * SAMSUNG JZ2440 board device tree source
+ *
+ * Copyright (c) 2013 Heiko Stuebner <heiko@sntech.de>
+ */
+
+/dts-v1/;
+#include "s3c2440.dtsi"
+
+/ {
+	model = "JZ2440";
+	compatible = "samsung,s3c2440";
+
+	memory {
+		reg =  <0x30000000 0x4000000>;
+	};
+
+	chosen {
+	    bootargs = "noinitrd root=/dev/mtdblock5 rw init=/linuxrc console=ttySAC0,115200n8 loglevel=8 earlyprintk rootfstype=jffs2";
+	};
+};
+
+&rtc {
+	status = "okay";
+};
+
+&uart_0 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0_data>;
+};
+
+&uart_1 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart1_data>;
+};
+
+&uart_2 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart2_data>;
+};
+
+&watchdog {
+	status = "okay";
+};
+
+&nand0 {
+	status = "okay";
+	nand,tacls = <0x14>;
+	nand,twrph0 = <0x3C>;
+	nand,twrph1 = <0x14>;
+
+	ecc-mode = <1>; /* 1: NAND_ECC_SOFT 2: NAND_ECC_HW */
+
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		label = "NAND";
+
+		spl@0 {
+		    label = "spl";
+			reg = <0x00000000 0x00020000>;
+			read-only;
+		};
+
+		bootloader@20000 {
+		    label = "bootloader";
+			reg = <0x00020000 0x000a0000>;
+			read-only;
+		};
+
+		params@c0000 {
+		    label = "params";
+			reg = <0x000c0000 0x00020000>;
+			read-only;
+		};
+
+		dtb@e0000 {
+		    label = "dtb";
+			reg = <0x000e0000 0x00020000>;
+			read-only;
+		};
+
+		kernel@100000 {
+		    label = "kernel";
+			reg = <0x00100000 0x00500000>;
+			read-only;
+		};
+
+		rootfs@600000 {
+		    label = "rootfs";
+			reg = <0x00600000 0x0fa00000>;
+		};
+	};
+};

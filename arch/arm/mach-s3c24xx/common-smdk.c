@@ -121,12 +121,17 @@ static struct mtd_partition smdk_default_nand_part[] = {
 		.size	= SZ_128K,
 	},
 	[3] = {
+		.name	= "dtb",
+		.offset = MTDPART_OFS_APPEND,
+		.size	= SZ_128K,
+	},
+	[4] = {
 		.name	= "kernel",
 		.offset	= MTDPART_OFS_APPEND,
 		.size	= SZ_1M * 5,
 	},
-	[4] = {
-		.name	= "root",
+	[5] = {
+		.name	= "rootfs",
 		.offset	= MTDPART_OFS_APPEND,
 		.size	= MTDPART_SIZ_FULL,
 	}

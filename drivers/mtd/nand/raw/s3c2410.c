@@ -46,6 +46,11 @@
 #include <linux/mtd/nand_ecc.h>
 #include <linux/mtd/partitions.h>
 
+#include <linux/pinctrl/machine.h>
+#include <linux/pinctrl/pinconf.h>
+#include <linux/pinctrl/pinconf-generic.h>
+#include <linux/pinctrl/pinctrl.h>
+#include <linux/pinctrl/pinmux.h>
 #include <linux/platform_data/mtd-nand-s3c2410.h>
 
 #define S3C2410_NFREG(x) (x)
@@ -865,6 +870,7 @@ static int s3c2410_nand_add_partition(struct s3c2410_nand_info *info,
 	return -ENODEV;
 }
 
+#if 0
 static int s3c2410_nand_setup_data_interface(struct mtd_info *mtd, int csline,
 					const struct nand_data_interface *conf)
 {
@@ -887,6 +893,7 @@ static int s3c2410_nand_setup_data_interface(struct mtd_info *mtd, int csline,
 
 	return s3c2410_nand_setrate(info);
 }
+#endif
 
 /**
  * s3c2410_nand_init_chip - initialise a single instance of an chip
@@ -902,7 +909,9 @@ static void s3c2410_nand_init_chip(struct s3c2410_nand_info *info,
 				   struct s3c2410_nand_mtd *nmtd,
 				   struct s3c2410_nand_set *set)
 {
+#if 0
 	struct device_node *np = info->device->of_node;
+#endif
 	struct nand_chip *chip = &nmtd->chip;
 	void __iomem *regs = info->regs;
 
@@ -916,12 +925,14 @@ static void s3c2410_nand_init_chip(struct s3c2410_nand_info *info,
 	chip->options	   = set->options;
 	chip->controller   = &info->controller;
 
+#if 0
 	/*
 	 * let's keep behavior unchanged for legacy boards booting via pdata and
 	 * auto-detect timings only when booting with a device tree.
 	 */
 	if (np)
 		chip->setup_data_interface = s3c2410_nand_setup_data_interface;
+#endif
 
 	switch (info->cpu_type) {
 	case TYPE_S3C2410:
@@ -1083,6 +1094,7 @@ static int s3c24xx_nand_probe_dt(struct platform_device *pdev)
 	struct s3c2410_nand_info *info = platform_get_drvdata(pdev);
 	struct device_node *np = pdev->dev.of_node, *child;
 	struct s3c2410_nand_set *sets;
+	int val;
 
 	devtype_data = of_device_get_match_data(&pdev->dev);
 	if (!devtype_data)
@@ -1093,6 +1105,34 @@ static int s3c24xx_nand_probe_dt(struct platform_device *pdev)
 	pdata = devm_kzalloc(&pdev->dev, sizeof(*pdata), GFP_KERNEL);
 	if (!pdata)
 		return -ENOMEM;
+
+	if (!of_property_read_u32(np, "nand,tacls", &val)) {
+		pdata->tacls = val;
+	} else {
+		dev_err(&pdev->dev, "DT: can not find tacls.\n");
+		return -EINVAL;
+	}
+
+	if (!of_property_read_u32(np, "nand,twrph0", &val)) {
+		pdata->twrph0 = val;
+	} else {
+		dev_err(&pdev->dev, "DT: can not find twrph0\n");
+		return -EINVAL;
+	}
+
+	if (!of_property_read_u32(np, "nand,twrph1", &val)) {	
+		pdata->twrph1 = val;	
+	} else {
+		dev_err(&pdev->dev, "DT: can not find twrph1\n");
+		return -EINVAL;
+	}
+
+	if (!of_property_read_u32(np, "ecc-mode", &val)) {
+		pdata->ecc_mode = val;
+	} else {
+		dev_err(&pdev->dev, "DT: can not find ecc-mode\n");
+		pdata->ecc_mode = NAND_ECC_SOFT;
+    }
 
 	pdev->dev.platform_data = pdata;
 
@@ -1143,6 +1183,8 @@ static int s3c24xx_nand_probe(struct platform_device *pdev)
 	struct s3c2410_nand_mtd *nmtd;
 	struct s3c2410_nand_set *sets;
 	struct resource *res;
+	struct pinctrl *pin;
+	struct pinctrl_state *pin_stat;
 	int err = 0;
 	int size;
 	int nr_sets;
@@ -1176,6 +1218,18 @@ static int s3c24xx_nand_probe(struct platform_device *pdev)
 
 	if (err)
 		goto exit_error;
+
+    pin = devm_pinctrl_get(&pdev->dev);
+    if (!pin) {
+	    dev_err(&pdev->dev, "failed to get pinctrl\n");
+	} else {
+	    pin_stat = pinctrl_lookup_state(pin, "default"); 
+	    if (!pin_stat) {
+	        dev_err(&pdev->dev, "failed to get pin state\n");
+	    } else {
+	        pinctrl_select_state(pin, pin_stat);
+	    }
+	}
 
 	plat = to_nand_plat(pdev);
 
@@ -1234,7 +1288,7 @@ static int s3c24xx_nand_probe(struct platform_device *pdev)
 		err = nand_scan_tail(mtd);
 		if (err)
 			goto exit_error;
-
+        
 		s3c2410_nand_add_partition(info, nmtd, sets);
 
 		if (sets != NULL)

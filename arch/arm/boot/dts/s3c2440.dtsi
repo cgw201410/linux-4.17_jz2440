@@ -1,0 +1,114 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Samsung's S3C2416 SoC device tree source
+ *
+ * Copyright (c) 2013 Heiko Stuebner <heiko@sntech.de>
+ */
+
+#include <dt-bindings/clock/s3c2410.h>
+#include "s3c24xx.dtsi"
+#include "s3c2440-pinctrl.dtsi"
+
+/ {
+	model = "Samsung S3C2440 SoC";
+	compatible = "samsung,s3c2440";
+
+	aliases {
+		serial0 = &uart_0;
+		serial1 = &uart_1;
+		serial2 = &uart_2;
+	};
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu {
+		    device_type = "cpu";
+			compatible = "arm,arm920t";
+			reg = <0>;
+		};
+	};
+
+	clocks {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		xti: xti {
+			compatible = "fixed-clock";
+			clock-frequency = <12000000>;
+			clock-output-names = "xti";
+			#clock-cells = <0>;
+		};
+	};
+
+	clocks: clock-controller@0x4c000000 {
+		compatible = "samsung,s3c2440-clock";
+		reg = <0x4c000000 0x20>;
+		#clock-cells = <1>;
+	};
+
+	interrupt-controller@4a000000 {
+		compatible = "samsung,s3c2410-irq";
+	};
+
+	pinctrl@56000000 {
+		compatible = "samsung,s3c2440-pinctrl";
+	};
+
+	timer@51000000 {
+		clocks = <&clocks PCLK_PWM>;
+		clock-names = "timers";
+	};
+
+	uart_0: serial@50000000 {
+		compatible = "samsung,s3c2440-uart";
+		clock-names = "uart";
+		clocks = <&clocks PCLK_UART0>;
+	};
+
+	uart_1: serial@50004000 {
+		compatible = "samsung,s3c2440-uart";
+		clock-names = "uart";
+		clocks = <&clocks PCLK_UART1>;
+	};
+
+	uart_2: serial@50008000 {
+		compatible = "samsung,s3c2440-uart";
+		clock-names = "uart";
+		clocks = <&clocks PCLK_UART2>;
+	};
+
+	watchdog: watchdog@53000000 {
+		interrupts = <1 9 27 3>;
+		clocks = <&clocks PCLK>;
+		clock-names = "watchdog";
+	};
+
+	rtc: rtc@57000000 {
+		compatible = "samsung,s3c2410-rtc";
+		clocks = <&clocks PCLK_RTC>;
+		clock-names = "rtc";
+	};
+
+	i2c@54000000 {
+		compatible = "samsung,s3c2440-i2c";
+		clocks = <&clocks PCLK_I2C>;
+		clock-names = "i2c";
+	};
+
+	nand0: nand-controller@4e000000 {
+		compatible = "samsung,s3c2440-nand";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		reg = <0x4e000000 0x40>;
+		interrupts = <0 0 24 3>;
+		clocks = <&clocks HCLK_NAND>;
+		clock-names = "nand";
+		pinctrl-names = "default";
+		pinctrl-0 = <&nand_pinctrl>;
+
+     	status = "disabled";
+    };
+};
