@@ -17,7 +17,7 @@
 	};
 
 	chosen {
-	    bootargs = "noinitrd root=/dev/mtdblock5 rw init=/linuxrc console=ttySAC0,115200n8 loglevel=8 earlyprintk rootfstype=jffs2;
+	    bootargs = "noinitrd root=/dev/mtdblock5 rw init=/linuxrc console=ttySAC0,115200n8 loglevel=8 earlyprintk rootfstype=jffs2";
 /*
  *      //partitions form u-boot by cmdlinepart
 	    bootargs = "noinitrd root=/dev/mtdblock5 rw init=/linuxrc console=ttySAC0,115200n8 loglevel=8 earlyprintk rootfstype=jffs2 \
@@ -65,7 +65,6 @@
 		compatible = "fixed-partitions";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		label = "NAND";
 
 		spl@0 {
 		    label = "spl";
