@@ -64,12 +64,6 @@ static struct s3c24xx_led_platdata smdk_pdata_led6 = {
 	.name		= "led6",
 };
 
-static struct s3c24xx_led_platdata smdk_pdata_led7 = {
-	.gpio		= S3C2410_GPF(7),
-	.flags		= S3C24XX_LEDF_ACTLOW | S3C24XX_LEDF_TRISTATE,
-	.name		= "led7",
-};
-
 static struct platform_device smdk_led4 = {
 	.name		= "s3c24xx_led",
 	.id		= 0,
@@ -91,14 +85,6 @@ static struct platform_device smdk_led6 = {
 	.id		= 2,
 	.dev		= {
 		.platform_data = &smdk_pdata_led6,
-	},
-};
-
-static struct platform_device smdk_led7 = {
-	.name		= "s3c24xx_led",
-	.id		= 3,
-	.dev		= {
-		.platform_data = &smdk_pdata_led7,
 	},
 };
 
@@ -166,14 +152,12 @@ static struct platform_device __initdata *smdk_devs[] = {
 	&smdk_led4,
 	&smdk_led5,
 	&smdk_led6,
-	&smdk_led7,
 };
 
 static const struct gpio smdk_led_gpios[] = {
 	{ S3C2410_GPF(4), GPIOF_OUT_INIT_HIGH, NULL },
 	{ S3C2410_GPF(5), GPIOF_OUT_INIT_HIGH, NULL },
 	{ S3C2410_GPF(6), GPIOF_OUT_INIT_HIGH, NULL },
-	{ S3C2410_GPF(7), GPIOF_OUT_INIT_HIGH, NULL },
 };
 
 void __init smdk_machine_init(void)
@@ -184,9 +168,6 @@ void __init smdk_machine_init(void)
 				     ARRAY_SIZE(smdk_led_gpios));
 	if (!WARN_ON(ret < 0))
 		gpio_free_array(smdk_led_gpios, ARRAY_SIZE(smdk_led_gpios));
-
-	if (machine_is_smdk2443())
-		smdk_nand_info.twrph0 = 50;
 
 	s3c_nand_set_platdata(&smdk_nand_info);
 
